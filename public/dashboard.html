@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard & File Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .dashboard-container {
+            width: 100%;
+            max-width: 850px;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            margin: 20px auto;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header-bar h2 {
+            margin: 0;
+            font-size: 1.6rem;
+            color: #1a202c;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            color: #4a5568;
+            margin-bottom: 25px;
+            background: #f7fafc;
+            padding: 12px 18px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .upload-card {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            background: #f8fafc;
+            margin-bottom: 25px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            background: #3182ce;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .file-input-label:hover {
+            background: #2b6cb0;
+        }
+
+        .file-list-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .file-list-table th,
+        .file-list-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        .file-list-table th {
+            background: #edf2f7;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-ready {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-processing {
+            background: #feebc8;
+            color: #744210;
+        }
+
+        .badge-failed {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #3182ce;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+            font-weight: 500;
+        }
+
+        .btn-preview {
+            background: #3182ce;
+            color: white;
+        }
+
+        .btn-download {
+            background: #38a169;
+            color: white;
+        }
+
+        .btn-delete-file {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-preview:hover {
+            background: #2b6cb0;
+        }
+
+        .btn-download:hover {
+            background: #2f855a;
+        }
+
+        .btn-delete-file:hover {
+            background: #c53030;
+        }
+
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 85vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 16px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #718096;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: #1a202c;
+        }
+
+        .media-preview {
+            width: 100%;
+            max-height: 60vh;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="header-bar">
+            <h2>User Dashboard</h2>
+            <div>
+                <button id="logoutBtn" style="background-color: #f0ad4e; margin-right: 8px;">Sign Out</button>
+                <button id="deleteBtn" style="background-color: #d9534f;">Delete Account</button>
+            </div>
+        </div>
+
+        <div class="user-info">
+            <div><strong>Name:</strong> <span id="userName">Loading...</span></div>
+            <div><strong>Email:</strong> <span id="userEmail">Loading...</span></div>
+        </div>
+
+        <div id="statusMessage"
+            style="display: none; margin-bottom: 15px; padding: 10px; border-radius: 4px; font-size: 0.9rem; text-align: center;">
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="upload-card">
+            <h3>📁 Upload Files</h3>
+            <p style="color: #718096; font-size: 0.85rem; margin: 8px 0 15px 0;">
+                Supports Videos (up to 10GB), Audio (100MB), Images & Documents (5MB). Multi-file enabled.
+            </p>
+            <label for="fileInput" class="file-input-label">Choose Files</label>
+            <input type="file" id="fileInput" multiple style="display: none;">
+            <div id="selectedFilesText" style="font-size: 0.85rem; color: #4a5568; margin-bottom: 10px;">No files selected</div>
+            <button id="uploadBtn" style="background: #38a169;" disabled>Start Upload</button>
+
+            <!-- Network Upload Progress Bar -->
+            <div id="uploadProgressContainer" style="display: none; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #4a5568; margin-bottom: 4px;">
+                    <span id="uploadProgressLabel">Uploading to server...</span>
+                    <span id="uploadProgressPercent" style="font-weight: 600;">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="uploadProgressBarFill" class="progress-bar-fill" style="width: 0%; background: #38a169;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Files List Section -->
+        <h3>Your Files</h3>
+        <table class="file-list-table">
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Size</th>
+                    <th>Status / Transcode Progress</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="filesTableBody">
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #718096;">Loading files...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Media Preview Modal -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModalBtn">&times;</span>
+            <h3 id="modalTitle" style="margin-bottom: 15px; font-size: 1.1rem; color: #2d3748;">File Preview</h3>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let pollInterval = null;
+
+        function showStatus(message, isError = false) {
+            const msgEl = document.getElementById('statusMessage');
+            msgEl.style.display = 'block';
+            msgEl.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
+            msgEl.style.color = isError ? '#721c24' : '#155724';
+            msgEl.style.border = isError ? '1px solid #f5c6cb' : '1px solid #c3e6cb';
+            msgEl.textContent = message;
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+                return null;
+            }
+            options.headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            };
+            const response = await fetch(url, options);
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/index.html';
+            }
+            return response;
+        }
+
+        async function loadProfile() {
+            const response = await apiFetch('/api/user');
+            if (response && response.ok) {
+                const user = await response.json();
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userEmail').textContent = user.email;
+            }
+        }
+
+        async function loadFiles() {
+            const response = await apiFetch('/api/files');
+            if (response && response.ok) {
+                const data = await response.json();
+                renderFilesTable(data.files || []);
+
+                // If any file is processing, start polling every 2 seconds
+                const hasProcessing = (data.files || []).some(f => f.status === 'processing');
+                if (hasProcessing && !pollInterval) {
+                    pollInterval = setInterval(loadFiles, 2000);
+                } else if (!hasProcessing && pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                }
+            }
+        }
+
+        function renderFilesTable(files) {
+            const tbody = document.getElementById('filesTableBody');
+            if (files.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #718096;">No files uploaded yet.</td></tr>`;
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+
+            tbody.innerHTML = files.map(file => {
+                const isReady = file.status === 'ready';
+                const isProcessing = file.status === 'processing';
+
+                let statusHtml = '';
+                if (isReady) {
+                    statusHtml = `<span class="badge badge-ready">Ready</span>`;
+                } else if (isProcessing) {
+                    const pct = file.progress || 0;
+                    statusHtml = `
+                        <span class="badge badge-processing">Transcoding ${pct}%</span>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: ${pct}%;"></div>
+                        </div>
+                    `;
+                } else {
+                    statusHtml = `<span class="badge badge-failed">Failed</span>`;
+                }
+
+                const downloadUrl = `/api/files/${file._id}/download?token=${token}`;
+
+                const actionHtml = isReady ? `
+                    <button class="action-btn btn-preview" onclick="openPreview('${file._id}', '${encodeURIComponent(file.originalName)}', '${file.mimeType}')">Preview</button>
+                    <a href="${downloadUrl}" download="${file.originalName}">
+                        <button class="action-btn btn-download">Download</button>
+                    </a>
+                    <button class="action-btn btn-delete-file" onclick="deleteUserFile('${file._id}')">Delete</button>
+                ` : `
+                    <button class="action-btn btn-delete-file" onclick="deleteUserFile('${file._id}')">Delete</button>
+                `;
+
+                return `
+                    <tr>
+                        <td><strong>${file.originalName}</strong></td>
+                        <td>${formatBytes(file.size)}</td>
+                        <td>${statusHtml}</td>
+                        <td>${actionHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function deleteUserFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) return;
+            const response = await apiFetch(`/api/files/${fileId}`, { method: 'DELETE' });
+            if (response && response.ok) {
+                showStatus('File deleted successfully!', false);
+                loadFiles();
+            } else {
+                showStatus('Failed to delete file', true);
+            }
+        }
+
+        function openPreview(fileId, originalNameEncoded, mimeType) {
+            const originalName = decodeURIComponent(originalNameEncoded);
+            const token = localStorage.getItem('token');
+            const previewUrl = `/api/files/${fileId}/preview?token=${token}`;
+            const modalBody = document.getElementById('modalBody');
+            document.getElementById('modalTitle').textContent = `Preview: ${originalName}`;
+
+            if (mimeType.startsWith('video/')) {
+                modalBody.innerHTML = `<video src="${previewUrl}" class="media-preview" controls autoplay></video>`;
+            } else if (mimeType.startsWith('audio/')) {
+                modalBody.innerHTML = `<audio src="${previewUrl}" style="width: 100%; margin-top: 15px;" controls autoplay></audio>`;
+            } else if (mimeType.startsWith('image/')) {
+                modalBody.innerHTML = `<img src="${previewUrl}" class="media-preview" style="object-fit: contain;">`;
+            } else if (mimeType === 'application/pdf') {
+                modalBody.innerHTML = `<iframe src="${previewUrl}" style="width: 100%; height: 500px; border: none;"></iframe>`;
+            } else {
+                modalBody.innerHTML = `<p style="padding: 20px; text-align: center; color: #718096;">Preview not directly available for this format. Please download the file.</p>`;
+            }
+
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        // Close Modal
+        document.getElementById('closeModalBtn').onclick = () => {
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = '';
+            document.getElementById('previewModal').style.display = 'none';
+        };
+
+        // File Selection Logic
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        fileInput.addEventListener('change', () => {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                document.getElementById('selectedFilesText').textContent = `${files.length} file(s) selected`;
+                uploadBtn.disabled = false;
+            } else {
+                document.getElementById('selectedFilesText').textContent = 'No files selected';
+                uploadBtn.disabled = true;
+            }
+        });
+
+        // Network Upload Action with Progress Bar
+        uploadBtn.addEventListener('click', () => {
+            const files = fileInput.files;
+            if (!files || files.length === 0) return;
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            const progressContainer = document.getElementById('uploadProgressContainer');
+            const progressBarFill = document.getElementById('uploadProgressBarFill');
+            const progressPercent = document.getElementById('uploadProgressPercent');
+            const progressLabel = document.getElementById('uploadProgressLabel');
+
+            progressContainer.style.display = 'block';
+            progressBarFill.style.width = '0%';
+            progressPercent.textContent = '0%';
+            progressLabel.textContent = 'Uploading to server...';
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/files/upload', true);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            // Real-time network upload progress listener
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    progressBarFill.style.width = `${percent}%`;
+                    progressPercent.textContent = `${percent}%`;
+                    if (percent >= 100) {
+                        progressLabel.textContent = 'Upload complete! Validating & processing...';
+                    }
+                }
+            };
+
+            xhr.onload = () => {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Start Upload';
+                setTimeout(() => { progressContainer.style.display = 'none'; }, 2500);
+
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    showStatus('Files uploaded successfully! Background processing started.', false);
+                    fileInput.value = '';
+                    document.getElementById('selectedFilesText').textContent = 'No files selected';
+                    loadFiles();
+                } else {
+                    let errorMsg = 'Failed to upload files';
+                    try {
+                        const res = JSON.parse(xhr.responseText);
+                        errorMsg = res.error || errorMsg;
+                    } catch (e) { }
+                    showStatus(errorMsg, true);
+                }
+            };
+
+            xhr.onerror = () => {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Start Upload';
+                progressContainer.style.display = 'none';
+                showStatus('Network error during file upload', true);
+            };
+
+            xhr.send(formData);
+        });
+
+        // Init Load
+        loadProfile();
+        loadFiles();
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await apiFetch('/api/logout', { method: 'POST' });
+            localStorage.removeItem('token');
+            window.location.href = '/index.html';
+        });
+
+        document.getElementById('deleteBtn').addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                return;
+            }
+            const response = await apiFetch('/api/user', { method: 'DELETE' });
+            if (response) {
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/signup.html';
+                } else {
+                    const errorMsg = data.error || data.message || 'Failed to delete account';
+                    showStatus(errorMsg, true);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

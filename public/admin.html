@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Industrial Session Control</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--white-2);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--font-dot);
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .session-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        .session-table th,
+        .session-table td {
+            border-bottom: 1px solid var(--line);
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .event-log {
+            background: #000;
+            color: #00ff66;
+            font-family: monospace;
+            padding: 12px;
+            height: 140px;
+            overflow-y: auto;
+            border-radius: 12px;
+            font-size: 0.82rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root">
+        <header class="panel"
+            style="padding: 16px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+            <h2>🛡️ Admin Session Control</h2>
+            <button id="logoutBtn" class="btn-secondary">Sign Out</button>
+        </header>
+
+        <!-- Admin Login Card -->
+        <div id="loginSection" class="panel" style="max-width: 400px; margin: 40px auto; padding: 24px;">
+            <h3>Admin Sign In</h3>
+            <input type="email" id="adminEmail" placeholder="Admin Email" required
+                style="width:100%; margin-bottom:12px;">
+            <input type="password" id="adminPassword" placeholder="Admin Password" required
+                style="width:100%; margin-bottom:12px;">
+            <button id="adminLoginBtn" style="width:100%;">Login as Admin</button>
+        </div>
+
+        <!-- Admin Dashboard Panel -->
+        <div id="dashboardSection" style="display:none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div>Total Users</div>
+                    <div id="statUsers" class="stat-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Active Sessions</div>
+                    <div id="statSessions" class="stat-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Revoked Tokens</div>
+                    <div id="statRevoked" class="stat-value">0</div>
+                </div>
+            </div>
+
+            <div class="panel" style="padding: 20px; margin-bottom: 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>System Active Sessions</h3>
+                    <button id="purgeBtn" class="btn-danger">🚨 Emergency Purge System</button>
+                </div>
+                <table class="session-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>IP Address</th>
+                            <th>Signed In</th>
+                            <th>JTI</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionTbody"></tbody>
+                </table>
+            </div>
+
+            <div class="panel" style="padding: 20px;">
+                <h3>Live SSE Event Stream Feed</h3>
+                <div id="eventLog" class="event-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sseSource = null;
+
+        function getAuthHeader() {
+            return { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}`, 'Content-Type': 'application/json' };
+        }
+
+        function renderSessionsTable(sessions) {
+            const tbody = document.getElementById('sessionTbody');
+            if (!sessions || sessions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No active sessions</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = sessions.map(s => `
+                <tr>
+                    <td><b>${s.name}</b><br><small>${s.email}</small></td>
+                    <td>${s.ip}</td>
+                    <td>${new Date(s.signinAt).toLocaleTimeString()}</td>
+                    <td><code>${s.jti.substring(0, 8)}...</code></td>
+                    <td><button onclick="revokeSession('${s.jti}')" class="btn-danger" style="padding:4px 8px; font-size:0.8rem;">Revoke</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function fetchStats() {
+            const res = await fetch('/api/admin/stats', { headers: getAuthHeader() });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('statUsers').textContent = data.totalUsers;
+                document.getElementById('statSessions').textContent = data.activeSessions;
+                document.getElementById('statRevoked').textContent = data.revokedTokensCount;
+            }
+        }
+
+        async function fetchSessions() {
+            const res = await fetch('/api/admin/sessions', { headers: getAuthHeader() });
+            if (res.ok) {
+                const { sessions } = await res.json();
+                renderSessionsTable(sessions);
+            }
+        }
+
+        async function revokeSession(jti) {
+            await fetch('/api/admin/sessions/revoke', {
+                method: 'POST',
+                headers: getAuthHeader(),
+                body: JSON.stringify({ targetJti: jti })
+            });
+        }
+
+        document.getElementById('purgeBtn').addEventListener('click', async () => {
+            if (confirm("Are you sure you want to execute an emergency system-wide session purge?")) {
+                await fetch('/api/admin/sessions/purge-system', { method: 'POST', headers: getAuthHeader() });
+            }
+        });
+
+        function connectSSE() {
+            const token = localStorage.getItem('adminToken');
+            if (!token) return;
+
+            if (sseSource) sseSource.close();
+            sseSource = new EventSource(`/api/admin/events/sse?token=${token}`);
+
+            sseSource.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+
+                // 1. Log event in live terminal ticker
+                const log = document.getElementById('eventLog');
+                const timeStr = new Date().toLocaleTimeString();
+                log.innerHTML += `<div>[${timeStr}] ${data.type}${data.email ? ': ' + data.email : ''}${data.message ? ': ' + data.message : ''}</div>`;
+                log.scrollTop = log.scrollHeight;
+
+                // 2. Render state directly from SSE event payload if provided!
+                if (data.state) {
+                    document.getElementById('statUsers').textContent = data.state.totalUsers;
+                    document.getElementById('statSessions').textContent = data.state.activeSessions;
+                    document.getElementById('statRevoked').textContent = data.state.revokedTokensCount;
+                    renderSessionsTable(data.state.sessions);
+                } else if (['SESSION_CREATED', 'SESSION_REVOKED', 'SYSTEM_PURGED'].includes(data.type)) {
+                    // Fallback REST fetch if state missing
+                    fetchStats();
+                    fetchSessions();
+                }
+            };
+        }
+
+        document.getElementById('adminLoginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+
+            const res = await fetch('/api/admin/signin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('adminToken', data.token);
+                showDashboard();
+            } else {
+                alert("Admin login failed");
+            }
+        });
+
+        function showDashboard() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            connectSSE();
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('adminToken');
+            if (sseSource) sseSource.close();
+            location.reload();
+        });
+
+        if (localStorage.getItem('adminToken')) {
+            showDashboard();
+        }
+    </script>
+</body>
+
+</html>
