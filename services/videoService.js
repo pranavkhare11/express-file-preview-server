@@ -3,6 +3,7 @@ const ffmpegPath = require('ffmpeg-static');
 const path = require('path');
 const fs = require('fs');
 const File = require('../models/File');
+const { uploadToDrive } = require('./driveService');
 
 if (ffmpegPath) {
     ffmpeg.setFfmpegPath(ffmpegPath);
@@ -53,19 +54,19 @@ function runFFmpegCommand(inputPath, outputPath, outputOptions, fileDoc) {
     });
 }
 
-async function processVideo(fileDoc) {
-    const isVideo = fileDoc.mimeType.startsWith('video/') ||
-        ['.mp4', '.mov', '.mkv', '.webm', '.mpeg', '.avi'].some(ext => fileDoc.filename.toLowerCase().endsWith(ext));
-
-    if (!isVideo) return;
-
+/**
+ * Transcodes video locally using FFmpeg, uploads optimized video to Google Drive, and cleans up local temp files.
+ * 
+ * @param {Object} fileDoc Mongoose File document
+ * @param {string} tempInputPath Local temporary file path for the raw video
+ */
+async function processVideo(fileDoc, tempInputPath) {
     try {
         await File.findByIdAndUpdate(fileDoc._id, { status: 'processing', progress: 0 });
 
-        const inputPath = fileDoc.path;
-        const dir = path.dirname(inputPath);
+        const tempDir = path.dirname(tempInputPath);
         const outputFilename = `fast_${path.parse(fileDoc.filename).name}.mp4`;
-        const outputPath = path.join(dir, outputFilename);
+        const outputPath = path.join(tempDir, outputFilename);
 
         console.log(`🎬 [VIDEO TRANSCODER START] Processing video: ${fileDoc.originalName}`);
 
@@ -73,7 +74,7 @@ async function processVideo(fileDoc) {
 
         try {
             console.log(`⚡ [FAST REMUX] Attempting zero-reencode faststart copy for ${fileDoc.originalName}...`);
-            await runFFmpegCommand(inputPath, outputPath, [
+            await runFFmpegCommand(tempInputPath, outputPath, [
                 '-c copy',
                 '-movflags +faststart'
             ], fileDoc);
@@ -81,7 +82,7 @@ async function processVideo(fileDoc) {
         } catch (fastCopyErr) {
             console.log(`⚠️ [FAST REMUX SKIPPED] Stream copy unsuited, switching to ultrafast transcoding: ${fastCopyErr.message}`);
             if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            await runFFmpegCommand(inputPath, outputPath, [
+            await runFFmpegCommand(tempInputPath, outputPath, [
                 '-c:v libx264',
                 '-c:a aac',
                 '-movflags +faststart',
@@ -92,21 +93,26 @@ async function processVideo(fileDoc) {
 
         if (success) {
             drawProgressBar(100, fileDoc.originalName);
-            console.log(`\n✅ [VIDEO TRANSCODER SUCCESS] Fast-start MP4 ready: ${fileDoc.originalName}`);
+            console.log(`\n📤 [UPLOADING TO DRIVE] Uploading optimized video to Google Drive: ${fileDoc.originalName}`);
 
-            if (fs.existsSync(inputPath) && inputPath !== outputPath) {
-                fs.unlinkSync(inputPath);
-            }
+            // Upload the optimized video stream to Google Drive inside user's folder
+            const videoStream = fs.createReadStream(outputPath);
+            const driveUpload = await uploadToDrive(videoStream, fileDoc.filename, 'video/mp4', fileDoc.userId);
 
-            const stats = fs.statSync(outputPath);
+            console.log(`\n✅ [VIDEO TRANSCODER SUCCESS] Uploaded to Drive with ID: ${driveUpload.driveFileId}`);
 
+            // Clean up temporary local files
+            if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+
+            // Update database record with driveFileId & ready status
             await File.findByIdAndUpdate(fileDoc._id, {
-                filename: outputFilename,
-                path: outputPath,
+                driveFileId: driveUpload.driveFileId,
                 mimeType: 'video/mp4',
-                size: stats.size,
+                size: driveUpload.size,
                 status: 'ready',
-                progress: 100
+                progress: 100,
+                path: undefined
             });
 
             try {
@@ -121,6 +127,10 @@ async function processVideo(fileDoc) {
 
     } catch (err) {
         console.error(`\n❌ [VIDEO TRANSCODER ERROR] Failed processing ${fileDoc.originalName}:`, err.message);
+
+        // Cleanup temp file on error
+        if (tempInputPath && fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
+
         await File.findByIdAndUpdate(fileDoc._id, { status: 'failed' });
     }
 }

@@ -1,28 +1,8 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const userId = req.user.userId;
-        const userDir = path.join(__dirname, '..', 'uploads', String(userId));
-
-        if (!fs.existsSync(userDir)) {
-            fs.mkdirSync(userDir, { recursive: true });
-        }
-
-        cb(null, userDir);
-    },
-    filename: (req, file, cb) => {
-        const rawName = req.user?.name || req.user?.email || 'user';
-        const sanitizedUsername = rawName.replace(/[^a-zA-Z0-9_-]/g, '_');
-        const uuid = crypto.randomUUID();
-        const ext = path.extname(file.originalname);
-        const filename = `${sanitizedUsername}-${uuid}${ext}`;
-        cb(null, filename);
-    }
-});
+// Use memory storage for direct streaming to Google Drive
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     const allowedMimeTypes = [
@@ -54,7 +34,7 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 10 * 1024 * 1024 * 1024
+        fileSize: 10 * 1024 * 1024 * 1024 // 10 GB max limit
     }
 });
 
@@ -78,9 +58,9 @@ function validateFileSizes(req, res, next) {
         const isVideo = file.mimetype.startsWith('video/') || ['.mp4', '.mov', '.mkv', '.webm', '.mpeg', '.avi'].includes(ext);
         const isMusic = file.mimetype.startsWith('audio/') || ['.mp3', '.wav', '.ogg'].includes(ext);
 
-        const maxDocOrImageSize = 5 * 1024 * 1024;
-        const maxMusicSize = 100 * 1024 * 1024;
-        const maxVideoSize = 10 * 1024 * 1024 * 1024;
+        const maxDocOrImageSize = 5 * 1024 * 1024; // 5 MB
+        const maxMusicSize = 100 * 1024 * 1024;     // 100 MB
+        const maxVideoSize = 10 * 1024 * 1024 * 1024; // 10 GB
 
         let limitExceeded = false;
         let errorMsg = '';
@@ -97,9 +77,6 @@ function validateFileSizes(req, res, next) {
         }
 
         if (limitExceeded) {
-            req.files.forEach(f => {
-                if (fs.existsSync(f.path)) fs.unlinkSync(f.path);
-            });
             return res.status(400).json({ error: errorMsg });
         }
     }

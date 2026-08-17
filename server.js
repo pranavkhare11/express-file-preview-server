@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
+const os = require("os");
 const { connectDatabases } = require("./config/db");
 const { seedAdmin } = require("./models/User");
 const { requestLogger } = require("./middlewares/loggerMiddleware");
@@ -21,16 +22,35 @@ app.use("/api", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/files", fileRoutes);
 
+function getLocalIpAddresses() {
+    const interfaces = os.networkInterfaces();
+    const ips = [];
+    for (const name of Object.keys(interfaces)) {
+        for (const net of interfaces[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                ips.push(net.address);
+            }
+        }
+    }
+    return ips;
+}
+
 async function startServer() {
     try {
         await connectDatabases();
         await seedAdmin();
 
         const port = process.env.PORT || 3000;
-        app.listen(port, () => {
+        const host = process.env.HOST || '0.0.0.0';
+        
+        app.listen(port, host, () => {
+            const networkIps = getLocalIpAddresses();
             console.log(`========================================`);
             console.log(`🚀 Server running on port ${port}`);
-            console.log(`🌐 Local URL: http://localhost:${port}`);
+            console.log(`🌐 Local URL:   http://localhost:${port}`);
+            networkIps.forEach(ip => {
+                console.log(`🌐 Network URL: http://${ip}:${port}`);
+            });
             console.log(`========================================`);
         });
     } catch (err) {
@@ -39,4 +59,5 @@ async function startServer() {
     }
 }
 
+// Server initialization
 startServer();
