@@ -1,29 +1,38 @@
 # Dependencies
 node_modules/
+**/node_modules/
 .pnpm-store/
 
-# Environment & Credentials
+# Local Environment Variables
 .env
 .env.local
-.env.development
-.env.production
+.env.*.local
+!**/.env.example
 
-# Uploaded Files & Temporary Storage
+# Build Outputs
+dist/
+build/
+out/
+**/dist/
+**/build/
+
+# Uploads & Temp Caches
 uploads/
-tmp/
-temp/
+**/uploads/
+**/temp/
+**/cache/
 
-# Logs
-*.log
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
-# OS & IDE Files
+# OS & IDE junk
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
-*.swp
-*.swo
+*.suo
+*.user
