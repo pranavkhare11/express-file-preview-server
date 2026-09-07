@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+.git
+.pnpm-store
+dist
+**/dist
+uploads
+**/uploads
+temp
+**/temp
+*.log

@@ -1,0 +1,145 @@
+services:
+  # ====================================================
+  # NGINX EDGE LOAD BALANCER & REVERSE PROXY
+  # ====================================================
+  nginx:
+    image: nginx:alpine
+    container_name: production-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./apps/client/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - server-node-1
+      - server-node-2
+      - server-node-3
+    networks:
+      - edge-net
+      - app-net
+
+  # ====================================================
+  # EXPRESS BACKEND LOAD-BALANCED NODES
+  # ====================================================
+  server-node-1:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: express-node-1
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
+      - REDIS_URI=redis://redis:6379
+      - JWT_SECRET=bhandara_karado_babuji
+      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
+      - ADMIN_PASSWORD=Admin@12345
+      - SILENT_LOGS=true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-net
+      - db-net
+
+  server-node-2:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: express-node-2
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
+      - REDIS_URI=redis://redis:6379
+      - JWT_SECRET=bhandara_karado_babuji
+      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
+      - ADMIN_PASSWORD=Admin@12345
+      - SILENT_LOGS=true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-net
+      - db-net
+
+  server-node-3:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: express-node-3
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
+      - REDIS_URI=redis://redis:6379
+      - JWT_SECRET=bhandara_karado_babuji
+      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
+      - ADMIN_PASSWORD=Admin@12345
+      - SILENT_LOGS=true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-net
+      - db-net
+
+  # ====================================================
+  # TUNED MONGODB
+  # ====================================================
+  mongodb:
+    image: mongo:latest
+    container_name: prod-mongodb
+    restart: always
+    command: mongod --wiredTigerCacheSizeGB 2 --maxConns 20000 --syncdelay 120
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - mongo_prod_data:/data/db
+    networks:
+      - db-net
+
+  # ====================================================
+  # TUNED REDIS
+  # ====================================================
+  redis:
+    image: redis:alpine
+    container_name: prod-redis
+    restart: always
+    command: redis-server --maxclients 20000 --tcp-backlog 2048 --tcp-keepalive 300 --timeout 0 --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - db-net
+
+networks:
+  edge-net:
+    driver: bridge
+  app-net:
+    driver: bridge
+  db-net:
+    driver: bridge
+
+volumes:
+  mongo_prod_data:
+  redis_prod_data:
