@@ -35,15 +35,15 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
-      - REDIS_URI=redis://redis:6379
+      - ENABLE_AEROSPIKE=true
+      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
       - ADMIN_EMAIL=khare.pranavmhs@gmail.com
       - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-net
@@ -59,15 +59,15 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
-      - REDIS_URI=redis://redis:6379
+      - ENABLE_AEROSPIKE=true
+      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
       - ADMIN_EMAIL=khare.pranavmhs@gmail.com
       - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-net
@@ -83,15 +83,15 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
-      - REDIS_URI=redis://redis:6379
+      - ENABLE_AEROSPIKE=true
+      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
       - ADMIN_EMAIL=khare.pranavmhs@gmail.com
       - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-net
@@ -107,15 +107,15 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
-      - REDIS_URI=redis://redis:6379
+      - ENABLE_AEROSPIKE=true
+      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
       - ADMIN_EMAIL=khare.pranavmhs@gmail.com
       - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-net
@@ -131,15 +131,15 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
-      - REDIS_URI=redis://redis:6379
+      - ENABLE_AEROSPIKE=true
+      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
       - ADMIN_EMAIL=khare.pranavmhs@gmail.com
       - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-net
@@ -155,7 +155,9 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - MONGO_URI=mongodb://mongodb:27017/encrypt_creds_db
-      - REDIS_URI=redis://redis:6379
+      - ENABLE_AEROSPIKE=true
+      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
       - ADMIN_EMAIL=khare.pranavmhs@gmail.com
       - ADMIN_PASSWORD=Admin@12345
@@ -163,14 +165,24 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     networks:
       - app-net
       - db-net
 
   # ====================================================
-  # TUNED MONGODB
+  # AEROSPIKE REAL-TIME HOT KEY-VALUE & SESSION STORE
+  # ====================================================
+  aerospike:
+    image: aerospike/aerospike-server:latest
+    container_name: prod-aerospike
+    restart: always
+    environment:
+      - NAMESPACE=test
+    networks:
+      - db-net
+
+  # ====================================================
+  # TUNED MONGODB (VFS Tree & Document Store)
   # ====================================================
   mongodb:
     image: mongo:latest
@@ -188,25 +200,6 @@ services:
     networks:
       - db-net
 
-  # ====================================================
-  # TUNED REDIS
-  # ====================================================
-  redis:
-    image: redis:alpine
-    container_name: prod-redis
-    restart: always
-    command: redis-server --maxclients 30000 --tcp-backlog 4096 --tcp-keepalive 300 --timeout 0 --save "" --appendonly no
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-    volumes:
-      - redis_prod_data:/data
-    networks:
-      - db-net
-
 networks:
   edge-net:
     driver: bridge
@@ -217,4 +210,3 @@ networks:
 
 volumes:
   mongo_prod_data:
-  redis_prod_data:

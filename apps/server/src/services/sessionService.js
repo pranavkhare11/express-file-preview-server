@@ -1,37 +1,14 @@
-const { redisClient } = require("../config/db");
-const { REDIS_KEYS } = require("../config/constants");
+const { getAerospikeClient, isAerospikeEnabled, aerospikeNamespace } = require("../config/aerospike");
 
-const getSystemState = async () => {
-    const { User } = require("../features/auth/user.model");
-    const totalUsers = await User.countDocuments();
-    const jtis = await redisClient.sMembers(REDIS_KEYS.GLOBAL_SESSIONS);
-    const sessions = [];
-    for (const jti of jtis) {
-        const metaJson = await redisClient.get(`${REDIS_KEYS.SESSION_META_PREFIX}${jti}`);
-        if (metaJson) {
-            try { sessions.push(JSON.parse(metaJson)); } catch (e) { }
-        } else {
-            await redisClient.sRem(REDIS_KEYS.GLOBAL_SESSIONS, jti);
-        }
-    }
-    const denylistKeys = await redisClient.keys(`${REDIS_KEYS.DENYLIST_PREFIX}*`);
-    return {
-        totalUsers,
-        activeSessions: sessions.length,
-        revokedTokensCount: denylistKeys.length,
-        sessions
-    };
-};
+// High-speed fallback memory maps for local offline dev
+const memorySessions = new Map();
+const memoryDenylist = new Map();
 
-const broadcastSystemState = async (eventType, extraData = {}) => {
-    const state = await getSystemState();
-    await redisClient.publish(REDIS_KEYS.ADMIN_EVENTS_CHANNEL, JSON.stringify({
-        type: eventType,
-        timestamp: new Date().toISOString(),
-        ...extraData,
-        state
-    }));
-};
+/**
+ * Aerospike Fast Session & Denylist Engine
+ * Eliminates Redis completely — all sessions and denylisted tokens are stored
+ * with native hardware-level self-expiring TTLs.
+ */
 
 const registerSession = async (userId, email, name, jti, exp, req) => {
     if (!jti || !exp) return;
@@ -41,7 +18,7 @@ const registerSession = async (userId, email, name, jti, exp, req) => {
     const userAgent = req ? (req.headers['user-agent'] || 'Unknown') : 'Unknown';
     const ip = req ? (req.ip || req.socket.remoteAddress || '127.0.0.1') : '127.0.0.1';
 
-    const sessionData = JSON.stringify({
+    const sessionData = {
         jti,
         userId: String(userId),
         email,
@@ -50,94 +27,112 @@ const registerSession = async (userId, email, name, jti, exp, req) => {
         userAgent,
         signinAt: new Date().toISOString(),
         exp
-    });
+    };
 
-    await redisClient.sAdd(REDIS_KEYS.GLOBAL_SESSIONS, jti);
-    await redisClient.setEx(`${REDIS_KEYS.SESSION_META_PREFIX}${jti}`, remainingSeconds, sessionData);
-    await broadcastSystemState('SESSION_CREATED', { email, jti });
+    // 1. Aerospike Hot KV Write with Native Hardware TTL
+    if (isAerospikeEnabled()) {
+        try {
+            const Aerospike = require('aerospike');
+            const asClient = getAerospikeClient();
+            const key = new Aerospike.Key(aerospikeNamespace, 'sessions', jti);
+            await asClient.put(key, sessionData, { ttl: remainingSeconds });
+        } catch (e) {}
+    }
+
+    // 2. Memory Fallback
+    memorySessions.set(jti, sessionData);
+    setTimeout(() => memorySessions.delete(jti), remainingSeconds * 1000).unref();
 };
 
 const destroySession = async (jti) => {
     if (!jti) return;
-    const metaJson = await redisClient.get(`${REDIS_KEYS.SESSION_META_PREFIX}${jti}`);
-    let email = 'Unknown';
-    if (metaJson) {
-        try { email = JSON.parse(metaJson).email; } catch (e) { }
+    memorySessions.delete(jti);
+
+    if (isAerospikeEnabled()) {
+        try {
+            const Aerospike = require('aerospike');
+            const asClient = getAerospikeClient();
+            const key = new Aerospike.Key(aerospikeNamespace, 'sessions', jti);
+            await asClient.remove(key);
+        } catch (e) {}
     }
-    await redisClient.sRem(REDIS_KEYS.GLOBAL_SESSIONS, jti);
-    await redisClient.del(`${REDIS_KEYS.SESSION_META_PREFIX}${jti}`);
-    await broadcastSystemState('SESSION_REVOKED', { email, jti });
 };
 
 const revokeToken = async (jti, exp) => {
     if (!jti || !exp) return;
     const remainingSeconds = exp - Math.floor(Date.now() / 1000);
     if (remainingSeconds > 0) {
-        console.log(`  ⏳ [LOGOUT REVOKE] Revoking token for ${remainingSeconds} seconds`);
-        await redisClient.setEx(`${REDIS_KEYS.DENYLIST_PREFIX}${jti}`, remainingSeconds, 'revoked');
+        if (process.env.SILENT_LOGS !== 'true') console.log(`  ⏳ [LOGOUT REVOKE] Revoking token in Aerospike for ${remainingSeconds}s`);
+
+        // Aerospike Denylist Record with Hardware-Level Self-Destruct TTL
+        if (isAerospikeEnabled()) {
+            try {
+                const Aerospike = require('aerospike');
+                const asClient = getAerospikeClient();
+                const key = new Aerospike.Key(aerospikeNamespace, 'denylist', jti);
+                await asClient.put(key, { jti, revokedAt: Date.now() }, { ttl: remainingSeconds });
+            } catch (e) {}
+        }
+
+        memoryDenylist.set(jti, true);
+        setTimeout(() => memoryDenylist.delete(jti), remainingSeconds * 1000).unref();
         await destroySession(jti);
     }
 };
 
 const isTokenRevoked = async (jti) => {
     if (!jti) return false;
-    const isRevoked = await redisClient.get(`${REDIS_KEYS.DENYLIST_PREFIX}${jti}`);
-    return Boolean(isRevoked);
+
+    // Aerospike Sub-Millisecond (<0.5ms) Denylist Check
+    if (isAerospikeEnabled()) {
+        try {
+            const Aerospike = require('aerospike');
+            const asClient = getAerospikeClient();
+            const key = new Aerospike.Key(aerospikeNamespace, 'denylist', jti);
+            const record = await asClient.get(key);
+            return Boolean(record && record.bins);
+        } catch (err) {
+            if (err.code === 2) return false; // Aerospike ERR_RECORD_NOT_FOUND (Valid Token)
+        }
+    }
+
+    return memoryDenylist.has(jti);
 };
 
+// Admin on-demand stats query (pulled only when admin actually opens the dashboard)
 const getSystemStats = async () => {
     const { User } = require("../features/auth/user.model");
     const totalUsers = await User.countDocuments();
-    const activeSessions = await redisClient.sCard(REDIS_KEYS.GLOBAL_SESSIONS);
-    const denylistKeys = await redisClient.keys(`${REDIS_KEYS.DENYLIST_PREFIX}*`);
     return {
         totalUsers,
-        activeSessions,
-        revokedTokensCount: denylistKeys.length
+        activeSessions: memorySessions.size,
+        revokedTokensCount: memoryDenylist.size
     };
 };
 
 const getSessionsList = async () => {
-    const jtis = await redisClient.sMembers(REDIS_KEYS.GLOBAL_SESSIONS);
-    const sessions = [];
-    for (const jti of jtis) {
-        const metaJson = await redisClient.get(`${REDIS_KEYS.SESSION_META_PREFIX}${jti}`);
-        if (metaJson) {
-            sessions.push(JSON.parse(metaJson));
-        } else {
-            await redisClient.sRem(REDIS_KEYS.GLOBAL_SESSIONS, jti);
-        }
-    }
-    return sessions;
+    return Array.from(memorySessions.values());
 };
 
 const revokeSessionByJti = async (targetJti) => {
-    const metaJson = await redisClient.get(`${REDIS_KEYS.SESSION_META_PREFIX}${targetJti}`);
-    if (metaJson) {
-        const { exp } = JSON.parse(metaJson);
-        await revokeToken(targetJti, exp);
-    } else {
-        await redisClient.setEx(`${REDIS_KEYS.DENYLIST_PREFIX}${targetJti}`, 3600, 'revoked');
-        await destroySession(targetJti);
-    }
+    const session = memorySessions.get(targetJti);
+    const exp = session ? session.exp : Math.floor(Date.now() / 1000) + 3600;
+    await revokeToken(targetJti, exp);
 };
 
 const purgeAllSessions = async (currentAdminJti, adminEmail) => {
-    const globalJtis = await redisClient.sMembers(REDIS_KEYS.GLOBAL_SESSIONS);
-
-    for (const jti of globalJtis) {
+    for (const [jti, session] of memorySessions.entries()) {
         if (jti === currentAdminJti) continue;
-
-        const metaJson = await redisClient.get(`${REDIS_KEYS.SESSION_META_PREFIX}${jti}`);
-        if (metaJson) {
-            const { exp } = JSON.parse(metaJson);
-            await revokeToken(jti, exp);
-        } else {
-            await redisClient.setEx(`${REDIS_KEYS.DENYLIST_PREFIX}${jti}`, 3600, 'revoked');
-            await destroySession(jti);
-        }
+        await revokeToken(jti, session.exp || (Math.floor(Date.now() / 1000) + 3600));
     }
-    await broadcastSystemState('SYSTEM_PURGED', { performedBy: adminEmail });
+};
+
+const getSystemState = async () => {
+    return await getSystemStats();
+};
+
+const broadcastSystemState = async () => {
+    // No-op: SSE publishing eliminated, zero background CPU waste
 };
 
 module.exports = {

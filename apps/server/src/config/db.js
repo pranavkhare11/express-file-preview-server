@@ -1,35 +1,29 @@
 const mongoose = require("mongoose");
-const { createClient } = require("redis");
-
-const redisClient = createClient({ url: process.env.REDIS_URI });
-redisClient.on('error', (err) => console.error('  ⚠️ [REDIS ERROR]', err.message));
-
-const redisSubClient = redisClient.duplicate();
-redisSubClient.on('error', (err) => console.error('  ⚠️ [REDIS SUB ERROR]', err.message));
+const { initAerospike, disconnectAerospike } = require("./aerospike");
 
 const connectDatabases = async () => {
     await Promise.all([
-        mongoose.connect(process.env.MONGO_URI),
-        redisClient.connect(),
-        redisSubClient.connect()
+        mongoose.connect(process.env.MONGO_URI, {
+            maxPoolSize: 150,
+            minPoolSize: 20,
+            maxConnecting: 20,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000
+        }),
+        initAerospike()
     ]);
-    console.log('  🍃 [MONGO CONNECTED]');
-    console.log('  🔴 [REDIS CONNECTED]');
+    console.log('  🍃 [MONGO CONNECTED (Pooled maxPoolSize=150)]');
 };
 
 const disconnectDatabases = async () => {
     await Promise.allSettled([
         mongoose.disconnect(),
-        redisClient.quit(),
-        redisSubClient.quit()
+        disconnectAerospike()
     ]);
-    console.log('  🍃 [MONGO DISCONNECTED]');
-    console.log('  🔴 [REDIS DISCONNECTED]');
+    console.log('  🍃 [DATABASES DISCONNECTED]');
 };
 
 module.exports = {
-    redisClient,
-    redisSubClient,
     connectDatabases,
     disconnectDatabases
 };

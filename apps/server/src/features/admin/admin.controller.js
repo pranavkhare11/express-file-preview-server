@@ -1,6 +1,5 @@
 const adminService = require("./admin.service");
-const { redisSubClient } = require("../../config/db");
-const { getSystemState } = require("../../services/sessionService");
+const { getSystemState, eventBus } = require("../../services/sessionService");
 
 const adminSignin = async (req, res, next) => {
     try {
@@ -66,18 +65,18 @@ const handleSseEvents = async (req, res, next) => {
         const initialState = await getSystemState();
         res.write(`data: ${JSON.stringify({ type: 'INITIAL_STATE', state: initialState })}\n\n`);
 
-        await redisSubClient.subscribe('admin_events', listener);
+        eventBus.on('admin_events', listener);
         isSubscribed = true;
 
-        req.on('close', async () => {
+        req.on('close', () => {
             if (isSubscribed) {
                 isSubscribed = false;
-                await redisSubClient.unsubscribe('admin_events', listener).catch(() => {});
+                eventBus.removeListener('admin_events', listener);
             }
         });
     } catch (error) {
         if (isSubscribed) {
-            await redisSubClient.unsubscribe('admin_events', listener).catch(() => {});
+            eventBus.removeListener('admin_events', listener);
         }
         next(error);
     }
