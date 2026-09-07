@@ -42,30 +42,40 @@ const formatBytes = (bytes) => {
 
 const runAllResourcesBenchmark = async () => {
     console.log(`\n========================================================================================`);
-    console.log(`🔥 FULL RESOURCE NGINX LOAD-BALANCED CLUSTER BENCHMARK`);
-    console.log(`   (Nginx Edge Proxy + 6 Load-Balanced Express Nodes + Scaled MongoDB + Scaled Redis)`);
+    console.log(`🔥 CLIENT-FACING NGINX LOAD-BALANCED CLUSTER BENCHMARK`);
+    console.log(`   (Nginx Edge Proxy + 6 Load-Balanced Express Nodes + Scaled MongoDB + Aerospike Hot KV)`);
     console.log(`========================================================================================\n`);
 
-    const adminEmail = 'khare.pranavmhs@gmail.com';
-    const adminPassword = 'Admin@12345';
+    const clientEmail = `benchmark_user_${Date.now()}@example.com`;
+    const clientPassword = 'ClientUser@12345';
+    const clientName = 'Benchmark Client';
 
-    console.log(`🔑 Authenticating test admin via Nginx (http://localhost/api/signin)...`);
-    const authRes = await jsonRequest('/api/signin', {
+    console.log(`🔑 Registering & Authenticating test client via Nginx (http://localhost/api/signup)...`);
+    const signupRes = await jsonRequest('/api/signup', {
         method: 'POST',
-        body: { email: adminEmail, password: adminPassword }
+        body: { name: clientName, email: clientEmail, password: clientPassword }
     });
 
-    if (authRes.status !== 200 || !authRes.body.token) {
-        throw new Error(`Authentication via Nginx failed: ${JSON.stringify(authRes.body)}`);
+    let token = null;
+    if (signupRes.status === 201 && signupRes.body.token) {
+        token = signupRes.body.token;
+    } else {
+        const signinRes = await jsonRequest('/api/signin', {
+            method: 'POST',
+            body: { email: clientEmail, password: clientPassword }
+        });
+        if (signinRes.status !== 200 || !signinRes.body.token) {
+            throw new Error(`Authentication via Nginx failed: ${JSON.stringify(signinRes.body)}`);
+        }
+        token = signinRes.body.token;
     }
 
-    const token = authRes.body.token;
-    console.log(`✅ Admin JWT Token acquired successfully via Nginx.\n`);
+    console.log(`✅ Client JWT Token acquired successfully via Nginx.\n`);
 
     const scenarios = [
         {
             name: '1. Nginx Edge Routing Baseline (/api/user 401)',
-            description: 'Measures Nginx reverse-proxy throughput & connection pooling ceiling.',
+            description: 'Measures Nginx reverse-proxy routing throughput & connection pooling ceiling.',
             opts: {
                 url: `${BASE_URL}/api/user`,
                 connections: 150,
@@ -75,7 +85,7 @@ const runAllResourcesBenchmark = async () => {
         },
         {
             name: '2. Authenticated Profile Fetch (/api/user)',
-            description: 'JWT verification + Redis session revocation check distributed across 6 nodes.',
+            description: 'JWT verification + Aerospike hot KV session/denylist check across 6 nodes.',
             opts: {
                 url: `${BASE_URL}/api/user`,
                 connections: 120,
@@ -88,7 +98,7 @@ const runAllResourcesBenchmark = async () => {
         },
         {
             name: '3. Virtual File Explorer Contents (/api/files/explorer)',
-            description: 'Authenticated MongoDB directory aggregation across 6 load-balanced nodes.',
+            description: 'Authenticated MongoDB Virtual File System directory tree aggregation.',
             opts: {
                 url: `${BASE_URL}/api/files/explorer`,
                 connections: 100,
@@ -100,21 +110,8 @@ const runAllResourcesBenchmark = async () => {
             }
         },
         {
-            name: '4. Admin System Stats (/api/admin/stats)',
-            description: 'Admin authorization + Redis session counts + MongoDB metrics via Nginx.',
-            opts: {
-                url: `${BASE_URL}/api/admin/stats`,
-                connections: 100,
-                duration: 5,
-                pipelining: 1,
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            }
-        },
-        {
-            name: '5. Frontend Static Asset Delivery (/)',
-            description: 'Nginx zero-copy static caching and gzip asset serving.',
+            name: '4. Frontend Static Asset Delivery (/)',
+            description: 'Nginx zero-copy static asset caching and gzip bundle delivery.',
             opts: {
                 url: `${BASE_URL}/`,
                 connections: 100,
@@ -142,7 +139,7 @@ const runAllResourcesBenchmark = async () => {
     }
 
     console.log(`========================================================================================`);
-    console.log(`📊 FULL RESOURCE NGINX CLUSTER BENCHMARK REPORT`);
+    console.log(`📊 CLIENT-FACING NGINX + AEROSPIKE + MONGODB BENCHMARK REPORT`);
     console.log(`========================================================================================\n`);
 
     const summaryTable = results.map(({ scenario, result }) => ({

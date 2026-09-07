@@ -1,7 +1,7 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
-# Install ffmpeg for media transcoding
-RUN apk update && apk add --no-cache ffmpeg
+# Install ffmpeg and libyaml for native Aerospike C++ client
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libyaml-0-2 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

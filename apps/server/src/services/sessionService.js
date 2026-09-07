@@ -97,6 +97,8 @@ const isTokenRevoked = async (jti) => {
     }
 
     return memoryDenylist.has(jti);
+};
+
 module.exports = {
     registerSession,
     destroySession,
