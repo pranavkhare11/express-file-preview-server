@@ -2,7 +2,6 @@ require('dotenv').config();
 const os = require("os");
 const app = require("./src/app");
 const { connectDatabases, disconnectDatabases } = require("./src/config/db");
-const { seedAdmin } = require("./src/features/auth/user.model");
 const { sweepStaleUploads } = require("./src/features/files/file.service");
 const { PORT, HOST } = require("./src/config/constants");
 
@@ -24,7 +23,6 @@ const getLocalIpAddresses = () => {
 const startServer = async () => {
     try {
         await connectDatabases();
-        await seedAdmin();
         await sweepStaleUploads();
 
         serverInstance = app.listen(PORT, HOST, () => {

@@ -2,7 +2,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
 }
 
 export interface VfsItem {
@@ -29,20 +28,3 @@ export interface VfsExplorerResponse {
   files: VfsItem[];
 }
 
-export interface AdminUserQuota {
-  id: string;
-  name: string;
-  email: string;
-  role: 'user' | 'admin';
-  storageUsed: number;
-  fileCount: number;
-  quotaLimit: number;
-}
-
-export interface AdminTelemetry {
-  totalUsers: number;
-  activeSessions: number;
-  revokedTokensCount: number;
-  totalStorageUsed: number;
-  users: AdminUserQuota[];
-}

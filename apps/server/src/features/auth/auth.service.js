@@ -64,7 +64,7 @@ const getUserProfile = async (userId) => {
     }
 
     console.log(`  👤 [PROFILE FETCHED] ${user.name} <${user.email}> (ID: ${user.id})`);
-    return { id: user._id, name: user.name, email: user.email, role: user.role };
+    return { id: user._id, name: user.name, email: user.email };
 };
 
 const logoutUser = async (jti, exp) => {

@@ -39,8 +39,6 @@ services:
       - AEROSPIKE_HOST=aerospike
       - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
-      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
-      - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
@@ -63,8 +61,6 @@ services:
       - AEROSPIKE_HOST=aerospike
       - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
-      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
-      - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
@@ -87,8 +83,6 @@ services:
       - AEROSPIKE_HOST=aerospike
       - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
-      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
-      - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
@@ -111,8 +105,6 @@ services:
       - AEROSPIKE_HOST=aerospike
       - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
-      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
-      - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
@@ -135,8 +127,6 @@ services:
       - AEROSPIKE_HOST=aerospike
       - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
-      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
-      - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:
@@ -159,8 +149,6 @@ services:
       - AEROSPIKE_HOST=aerospike
       - AEROSPIKE_PORT=3000
       - JWT_SECRET=bhandara_karado_babuji
-      - ADMIN_EMAIL=khare.pranavmhs@gmail.com
-      - ADMIN_PASSWORD=Admin@12345
       - SILENT_LOGS=true
     depends_on:
       mongodb:

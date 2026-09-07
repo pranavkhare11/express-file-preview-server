@@ -29,7 +29,7 @@ const initAerospike = async () => {
         console.log(`  🚀 [AEROSPIKE CONNECTED] Hot Session & Denylist Tier active on ${aerospikeHost}:${aerospikePort}`);
         return aerospikeClient;
     } catch (err) {
-        console.warn(`  ℹ️ [AEROSPIKE NOTE] Aerospike driver not active, falling back to Redis Hot Tier: ${err.message}`);
+        console.warn(`  ℹ️ [AEROSPIKE NOTE] Aerospike driver not active, falling back to In-Memory Hot Tier: ${err.message}`);
         isAerospikeEnabled = false;
         return null;
     }

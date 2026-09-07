@@ -60,13 +60,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <DetailValue>{user.email}</DetailValue>
         </UserDetailRow>
 
-        <UserDetailRow>
-          <DetailLabel>ACCOUNT ROLE</DetailLabel>
-          <DetailValue style={{ textTransform: 'uppercase', color: user.role === 'admin' ? 'var(--red)' : 'var(--text-main)' }}>
-            {user.role}
-          </DetailValue>
-        </UserDetailRow>
-
         <DangerZone>
           <DangerTitle>⚠️ DANGER ZONE</DangerTitle>
           <DeleteButton onClick={handleDelete} disabled={isDeleting}>

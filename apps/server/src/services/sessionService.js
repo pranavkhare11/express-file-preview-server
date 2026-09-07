@@ -97,53 +97,10 @@ const isTokenRevoked = async (jti) => {
     }
 
     return memoryDenylist.has(jti);
-};
-
-// Admin on-demand stats query (pulled only when admin actually opens the dashboard)
-const getSystemStats = async () => {
-    const { User } = require("../features/auth/user.model");
-    const totalUsers = await User.countDocuments();
-    return {
-        totalUsers,
-        activeSessions: memorySessions.size,
-        revokedTokensCount: memoryDenylist.size
-    };
-};
-
-const getSessionsList = async () => {
-    return Array.from(memorySessions.values());
-};
-
-const revokeSessionByJti = async (targetJti) => {
-    const session = memorySessions.get(targetJti);
-    const exp = session ? session.exp : Math.floor(Date.now() / 1000) + 3600;
-    await revokeToken(targetJti, exp);
-};
-
-const purgeAllSessions = async (currentAdminJti, adminEmail) => {
-    for (const [jti, session] of memorySessions.entries()) {
-        if (jti === currentAdminJti) continue;
-        await revokeToken(jti, session.exp || (Math.floor(Date.now() / 1000) + 3600));
-    }
-};
-
-const getSystemState = async () => {
-    return await getSystemStats();
-};
-
-const broadcastSystemState = async () => {
-    // No-op: SSE publishing eliminated, zero background CPU waste
-};
-
 module.exports = {
     registerSession,
     destroySession,
     revokeToken,
-    isTokenRevoked,
-    getSystemStats,
-    getSessionsList,
-    revokeSessionByJti,
-    purgeAllSessions,
-    getSystemState,
-    broadcastSystemState
+    isTokenRevoked
 };
+

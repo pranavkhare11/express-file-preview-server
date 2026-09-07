@@ -20,10 +20,6 @@ const errorHandler = (err, req, res, next) => {
         return res.status(404).json({ error: "User profile not found." });
     }
 
-    if (err.message === 'FORBIDDEN_ACCESS') {
-        return res.status(403).json({ error: "Access denied. Administrator privileges required." });
-    }
-
     if (err.message === 'FILE_NOT_FOUND') {
         return res.status(404).json({ error: "File not found." });
     }

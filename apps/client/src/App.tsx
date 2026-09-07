@@ -4,12 +4,11 @@ import { Navbar } from './components/layout/Navbar/Navbar';
 import { SettingsModal } from './components/layout/SettingsModal/SettingsModal';
 import { AuthPage } from './features/auth/AuthPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
-import { AdminPanel } from './features/admin/AdminPanel';
 import { ExplorerPage } from './features/explorer/ExplorerPage';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'explorer' | 'admin'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'explorer'>('dashboard');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (isLoading) {
@@ -42,12 +41,7 @@ const AppContent: React.FC = () => {
       {currentView === 'dashboard' && (
         <DashboardPage
           onOpenExplorer={() => setCurrentView('explorer')}
-          onOpenAdmin={() => setCurrentView('admin')}
         />
-      )}
-
-      {currentView === 'admin' && (
-        <AdminPanel onBack={() => setCurrentView('dashboard')} />
       )}
 
       {currentView === 'explorer' && (

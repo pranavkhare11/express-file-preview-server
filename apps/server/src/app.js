@@ -4,7 +4,6 @@ const cookieParser = require("cookie-parser");
 const { requestLogger } = require("./middlewares/loggerMiddleware");
 const { errorHandler } = require("./middlewares/errorMiddleware");
 const authRouter = require("./features/auth/auth.router");
-const adminRouter = require("./features/admin/admin.router");
 const fileRouter = require("./features/files/file.router");
 
 const app = express();
@@ -20,7 +19,6 @@ app.use(cors({
 app.use(requestLogger);
 
 app.use("/api", authRouter);
-app.use("/api/admin", adminRouter);
 app.use("/api/files", fileRouter);
 
 // Global Error Handler middleware mounted below all routes

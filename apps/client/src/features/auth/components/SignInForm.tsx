@@ -32,7 +32,7 @@ export const SignInForm: React.FC = () => {
         <Input
           type="email"
           required
-          placeholder="admin@example.com"
+          placeholder="user@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />

@@ -31,10 +31,9 @@ const decodeToken = (token) => {
     return jwt.decode(token);
 };
 
-const generateTokens = (user, roleOverride = null) => {
+const generateTokens = (user) => {
     const jti = crypto.randomUUID();
-    const role = roleOverride || user.role || 'user';
-    const payload = { userId: user._id, email: user.email, name: user.name, role };
+    const payload = { userId: user._id, email: user.email, name: user.name };
 
     const accessToken = signAccessToken(payload, { jwtid: jti });
     const refreshToken = signRefreshToken({ userId: user._id, jti });

@@ -20,12 +20,10 @@ import {
 
 interface DashboardPageProps {
   onOpenExplorer: () => void;
-  onOpenAdmin: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   onOpenExplorer,
-  onOpenAdmin,
 }) => {
   const { user } = useAuth();
 
@@ -34,7 +32,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <WelcomeBanner>
         <BannerTextGroup>
           <BannerTitle>WELCOME, {user?.name.toUpperCase()}</BannerTitle>
-          <BannerSub>SYSTEM SESSION ACTIVE // ACTIVE ROLE: {user?.role.toUpperCase()}</BannerSub>
+          <BannerSub>NOTHING // OS CLOUD VFS SESSION ACTIVE</BannerSub>
         </BannerTextGroup>
       </WelcomeBanner>
 
@@ -49,33 +47,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </CardTitleGroup>
           </CardHeader>
           <CardDescription>
-            Virtual File System with recursive folder management, multi-file uploads, Drag & Drop, and byte-range video streaming.
+            Virtual File System with recursive folder management, multi-file uploads, Drag & Drop, and byte-range media streaming.
           </CardDescription>
           <CardFooter>
             <ActionText>LAUNCH EXPLORER</ActionText>
             <span>-&gt;</span>
           </CardFooter>
         </ModuleCard>
-
-        {/* Conditional Admin Control Panel Card */}
-        {user?.role === 'admin' && (
-          <ModuleCard $admin onClick={onOpenAdmin}>
-            <CardHeader>
-              <CardIcon $admin>🛡️</CardIcon>
-              <CardTitleGroup>
-                <CardTitle style={{ color: 'var(--red)' }}>ADMIN CONTROL</CardTitle>
-                <CardSub>PRIVACY-FIRST TELEMETRY</CardSub>
-              </CardTitleGroup>
-            </CardHeader>
-            <CardDescription>
-              Monitor overall server storage consumption, manage user quotas, view mime-type metrics, and trigger automated stale upload sweeps.
-            </CardDescription>
-            <CardFooter>
-              <ActionText $admin>OPEN ADMIN PANEL</ActionText>
-              <span style={{ color: 'var(--red)' }}>-&gt;</span>
-            </CardFooter>
-          </ModuleCard>
-        )}
       </ModuleGrid>
     </DashboardContainer>
   );

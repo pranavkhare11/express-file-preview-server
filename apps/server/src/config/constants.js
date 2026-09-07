@@ -24,14 +24,6 @@ const COOKIE_OPTIONS = {
     }
 };
 
-const REDIS_KEYS = {
-    GLOBAL_SESSIONS: 'global_sessions',
-    DENYLIST_PREFIX: 'denylist:',
-    REFRESH_PREFIX: 'refresh_session:',
-    SESSION_META_PREFIX: 'session_meta:',
-    ADMIN_EVENTS_CHANNEL: 'admin_events'
-};
-
 const FILE_LIMITS = {
     MAX_FILE_COUNT: 5,
     MAX_FILE_SIZE_OVERALL: 10 * 1024 * 1024 * 1024, // 10 GB
@@ -73,7 +65,6 @@ module.exports = {
     COOKIE_OPTIONS,
     PASSWORD_MIN_LENGTH,
     SALT_ROUNDS,
-    REDIS_KEYS,
     FILE_LIMITS,
     ALLOWED_MIME_TYPES,
     ALLOWED_EXTENSIONS,

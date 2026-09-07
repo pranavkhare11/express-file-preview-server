@@ -19,7 +19,7 @@ const signup = async (req, res, next) => {
         res.status(201).json({
             message: "User created successfully",
             token: result.accessToken,
-            user: { id: result.user._id, name: result.user.name, email: result.user.email, role: result.user.role }
+            user: { id: result.user._id, name: result.user.name, email: result.user.email }
         });
     } catch (error) {
         next(error);
@@ -34,7 +34,7 @@ const signin = async (req, res, next) => {
         res.json({
             message: "Login Success",
             token: result.accessToken,
-            user: { id: result.user._id, name: result.user.name, email: result.user.email, role: result.user.role }
+            user: { id: result.user._id, name: result.user.name, email: result.user.email }
         });
     } catch (error) {
         next(error);
@@ -49,7 +49,7 @@ const refreshToken = async (req, res, next) => {
         res.json({
             message: "Token refreshed successfully",
             token: result.accessToken,
-            user: { id: result.user._id, name: result.user.name, email: result.user.email, role: result.user.role }
+            user: { id: result.user._id, name: result.user.name, email: result.user.email }
         });
     } catch (error) {
         clearAuthCookies(res);

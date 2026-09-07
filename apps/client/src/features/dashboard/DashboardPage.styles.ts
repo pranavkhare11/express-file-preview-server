@@ -50,9 +50,9 @@ export const ModuleGrid = styled.div`
   gap: 20px;
 `;
 
-export const ModuleCard = styled.div<{ $admin?: boolean }>`
+export const ModuleCard = styled.div`
   background: var(--bg-card);
-  border: 1px solid ${(props) => (props.$admin ? 'rgba(215, 25, 33, 0.4)' : 'var(--line-2)')};
+  border: 1px solid var(--line-2);
   border-radius: 14px;
   padding: 24px;
   display: flex;
@@ -66,11 +66,8 @@ export const ModuleCard = styled.div<{ $admin?: boolean }>`
 
   &:hover {
     transform: translateY(-4px);
-    border-color: ${(props) => (props.$admin ? 'var(--red)' : 'rgba(255, 255, 255, 0.4)')};
-    box-shadow: ${(props) =>
-      props.$admin
-        ? '0 12px 35px rgba(215, 25, 33, 0.25)'
-        : '0 12px 35px rgba(255, 255, 255, 0.08)'};
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 12px 35px rgba(255, 255, 255, 0.08);
   }
 `;
 
@@ -80,13 +77,13 @@ export const CardHeader = styled.div`
   gap: 14px;
 `;
 
-export const CardIcon = styled.div<{ $admin?: boolean }>`
+export const CardIcon = styled.div`
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: ${(props) => (props.$admin ? 'rgba(215, 25, 33, 0.15)' : 'rgba(255, 255, 255, 0.06)')};
-  border: 1px solid ${(props) => (props.$admin ? 'var(--red)' : 'var(--line-2)')};
-  color: ${(props) => (props.$admin ? 'var(--red)' : 'var(--text-main)')};
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-2);
+  color: var(--text-main);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -126,10 +123,10 @@ export const CardFooter = styled.div`
   padding-top: 14px;
 `;
 
-export const ActionText = styled.span<{ $admin?: boolean }>`
+export const ActionText = styled.span`
   font-family: var(--font-dot);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: ${(props) => (props.$admin ? 'var(--red)' : 'var(--text-main)')};
+  color: var(--text-main);
 `;
