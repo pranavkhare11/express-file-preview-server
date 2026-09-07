@@ -32,5 +32,8 @@
     "mongoose": "^9.8.1",
     "multer": "^2.2.0",
     "redis": "^6.1.0"
+  },
+  "devDependencies": {
+    "autocannon": "^8.0.0"
   }
 }
