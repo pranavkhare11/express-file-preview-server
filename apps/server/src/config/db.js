@@ -1,26 +1,13 @@
-const mongoose = require("mongoose");
 const { initAerospike, disconnectAerospike } = require("./aerospike");
 
 const connectDatabases = async () => {
-    await Promise.all([
-        mongoose.connect(process.env.MONGO_URI, {
-            maxPoolSize: 150,
-            minPoolSize: 20,
-            maxConnecting: 20,
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000
-        }),
-        initAerospike()
-    ]);
-    console.log('  🍃 [MONGO CONNECTED (Pooled maxPoolSize=150)]');
+    await initAerospike();
+    console.log('  🚀 [AEROSPIKE DATABASE CONNECTED] High-Performance Real-Time Storage Active');
 };
 
 const disconnectDatabases = async () => {
-    await Promise.allSettled([
-        mongoose.disconnect(),
-        disconnectAerospike()
-    ]);
-    console.log('  🍃 [DATABASES DISCONNECTED]');
+    await disconnectAerospike();
+    console.log('  🚀 [AEROSPIKE DATABASE DISCONNECTED]');
 };
 
 module.exports = {

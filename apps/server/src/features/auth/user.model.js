@@ -1,14 +1,12 @@
-const mongoose = require("mongoose");
+const { UserStore } = require("../../config/aerospikeStore");
 
-const userSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, index: true, lowercase: true },
-    hashedPassword: { type: String, required: true }
-}, { timestamps: true });
-
-const User = mongoose.model('User', userSchema);
+const User = {
+    create: (data) => UserStore.create(data),
+    findOne: (query) => UserStore.findOne(query),
+    findById: (id) => UserStore.findById(id),
+    findByIdAndDelete: (id) => UserStore.findByIdAndDelete(id)
+};
 
 module.exports = {
     User
 };
-

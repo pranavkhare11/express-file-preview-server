@@ -1,19 +1,4 @@
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: local-mongodb
-    restart: always
-    ports:
-      - "27017:27017"
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-    volumes:
-      - mongo_data:/data/db
-
   aerospike:
     image: aerospike/aerospike-server:latest
     container_name: local-aerospike
@@ -26,6 +11,4 @@ services:
       - aerospike_data:/opt/aerospike/data
 
 volumes:
-  mongo_data:
   aerospike_data:
-
