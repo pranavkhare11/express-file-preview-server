@@ -2,5 +2,6 @@ packages:
   - 'apps/*'
 
 allowBuilds:
-  aerospike: set this to true or false
+  aerospike: true
   ffmpeg-static: true
+  bcryptjs: true

@@ -14,21 +14,18 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  redis:
-    image: redis:alpine
-    container_name: local-redis
+  aerospike:
+    image: aerospike/aerospike-server:latest
+    container_name: local-aerospike
     restart: always
     ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+      - "3000:3000"
+    environment:
+      - NAMESPACE=test
     volumes:
-      - redis_data:/data
+      - aerospike_data:/opt/aerospike/data
 
 volumes:
   mongo_data:
-  redis_data:
+  aerospike_data:
+
